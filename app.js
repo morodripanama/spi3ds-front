@@ -10,7 +10,7 @@
   const expEl = $('#exp');
   const cvvEl = $('#cvv');
   const logEl = $('#log');
-  
+
   const saleStatus = $('#saleStatus');
   const btn = $('#btnSale');
 
@@ -24,21 +24,47 @@
     logEl.scrollTop = logEl.scrollHeight;
   }
 
+  // ---- Normalizadores requeridos por PTZ ----
+  // Moneda: ISO-4217 numérico (USD=840, PAB=590)
+  const isoMap = { USD: "840", PAB: "590" };
+
+  // Expiración: convertir entrada de usuario a YYMM (o respetar YYMMDD si ya viene así)
+  function normalizeExpiry(input) {
+    const s = String(input || '').replace(/\D/g, '');
+    if (s.length === 4) {           // asume MMYY -> YYMM
+      const mm = s.slice(0,2), yy = s.slice(2,4);
+      return yy + mm;
+    }
+    if (s.length === 6) {           // ya es YYMMDD
+      return s;
+    }
+    if (s.length === 5) {           // caso raro: fuerza YYMM con últimos 2 como YY
+      const mm = s.slice(0,2), yy = s.slice(-2);
+      return yy + mm;
+    }
+    // fallback (si ya viene YYMM, queda igual)
+    return s;
+  }
+
   async function callSale(){
     const apiBase = apiBaseEl.value.trim();
     if (!apiBase) return alert('Configura API_BASE');
     const merchantUrl = merchantUrlEl.value.trim();
     if (!merchantUrl) return alert('Configura MerchantResponseUrl');
 
+    const rawAmount = Number(amountEl.value || '0');
+    const currNumeric = isoMap[currencyEl.value] || currencyEl.value; // permite numérico directo
+    const normalizedExp = normalizeExpiry(expEl.value);
+
     const body = {
-      TotalAmount: Number(amountEl.value || '0'),
-      CurrencyCode: currencyEl.value,
+      TotalAmount: rawAmount,
+      CurrencyCode: currNumeric,          // ISO numérico (e.g., 840)
       ThreeDSecure: true,
       TerminalId: terminalIdEl.value || undefined,
       OrderIdentifier: orderIdEl.value || undefined,
       Source: {
         CardPan: panEl.value,
-        CardExpiration: expEl.value,
+        CardExpiration: normalizedExp,    // YYMM (o YYMMDD)
         CardCvv: cvvEl.value
       },
       ExtendedData: {
@@ -150,4 +176,5 @@
 
   btn.addEventListener('click', callSale);
 })();
+
 
