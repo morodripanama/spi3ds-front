@@ -153,26 +153,29 @@
   }
 
   // Recibe el SpiToken del callback y ejecuta /payment
-  window.addEventListener('message', async (ev) => {
-    if (!ev || !ev.data || ev.data.type !== 'PTZ_3DS_DONE') return;
-    const payload = ev.data.payload || {};
-    log('Mensaje 3DS recibido'); log(payload);
-    if (!payload.SpiToken) { log('No llegó SpiToken; revisa el callback.'); return; }
+window.addEventListener('message', async (ev) => {
+  if (!ev || !ev.data || ev.data.type !== 'PTZ_3DS_DONE') return;
+  const payload = ev.data.payload || {};
+  log('Mensaje 3DS recibido'); log(payload);
+  if (!payload.SpiToken) { log('No llegó SpiToken; revisa el callback.'); return; }
 
-    const apiBase = apiBaseEl.value.trim();
-    const payUrl = apiBase.replace(/\/+$/,'') + '/api/spi/payment';
-    log(`> POST ${payUrl}`);
-    try {
-      const r = await fetch(payUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ SpiToken: payload.SpiToken })
-      });
-      const txt = await r.text();
-      let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-      log('> /api/spi/payment respuesta:'); log(data);
-    } catch(e) { log(e.message || e.toString()); }
-  });
+  const apiBase = apiBaseEl.value.trim();
+  const payUrl = apiBase.replace(/\/+$/,'') + '/api/spi/payment';
+  log(`> POST ${payUrl}`);
+  try {
+    const r = await fetch(payUrl, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        SpiToken: payload.SpiToken,
+        TransactionIdentifier: payload.TransactionIdentifier || payload.Response?.TransactionIdentifier
+      })
+    });
+    const txt = await r.text();
+    let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+    log('> /api/spi/payment respuesta:'); log(data);
+  } catch(e) { log(e.message || e.toString()); }
+});
+
 
   btn.addEventListener('click', callSale);
 })();
