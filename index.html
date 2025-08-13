@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SmartPayPasarelas — SPI 3‑D Secure Tester</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="wrap">
+  <h1>PowerTranz — SPI 3‑D Secure (Tester)</h1>
+  <div class="card">
+    <p class="muted">
+      Backend: <code id="backendUrl">https://smartpaypasarelas.onrender.com</code>
+      &nbsp;|&nbsp; Callback 3DS: <code>https://smartpaypasarelas.onrender.com/api/spi/3ds/return</code>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>1) Configuración</h2>
+    <div class="row">
+      <div>
+        <label>API_BASE (backend)</label>
+        <input id="apiBase" value="https://smartpaypasarelas.onrender.com" />
+      </div>
+      <div>
+        <label>Merchant Response URL</label>
+        <input id="merchantUrl" value="https://smartpaypasarelas.onrender.com/api/spi/3ds/return" />
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>TerminalId (opcional)</label>
+        <input id="terminalId" placeholder="XXXXXXX" />
+      </div>
+      <div>
+        <label>OrderIdentifier (opcional)</label>
+        <input id="orderId" placeholder="ORDER-12345" />
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2) Datos de compra (demo)</h2>
+    <div class="row">
+      <div>
+        <label>Monto</label>
+        <input id="amount" type="number" value="12.34" step="0.01" />
+      </div>
+      <div>
+        <label>Moneda</label>
+        <select id="currency">
+          <option value="USD" selected>USD</option>
+          <option value="PAB">PAB</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>CardPan</label>
+        <input id="pan" value="4111111111111111" />
+      </div>
+      <div>
+        <label>Exp (MMYY)</label>
+        <input id="exp" value="1228" />
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>CVV</label>
+        <input id="cvv" value="123" />
+      </div>
+      <div style="display:flex;align-items:end;gap:12px">
+        <button id="btnSale" class="btn">Iniciar /spi/Sale (3DS)</button>
+        <span id="saleStatus" class="muted"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3) Resultado</h2>
+    <pre id="log">Listo.
+— Pulsa «Iniciar /spi/Sale (3DS)» y sigue el flujo.
+— Tras 3DS, si llega el SpiToken, se llamará /api/spi/payment.</pre>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
