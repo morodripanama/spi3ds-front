@@ -10,6 +10,7 @@
   const expEl = $('#exp');
   const cvvEl = $('#cvv');
   const logEl = $('#log');
+  
   const saleStatus = $('#saleStatus');
   const btn = $('#btnSale');
 
