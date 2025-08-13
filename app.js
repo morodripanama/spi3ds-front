@@ -10,11 +10,10 @@
   const expEl = $('#exp');
   const cvvEl = $('#cvv');
   const logEl = $('#log');
-
   const saleStatus = $('#saleStatus');
   const btn = $('#btnSale');
 
-  // 💡 Defaults correctos para tu deploy en Render
+  // Defaults para tu deploy en Render
   if (apiBaseEl && !apiBaseEl.value) apiBaseEl.value = "https://smartpaypasarelas.onrender.com";
   if (merchantUrlEl && !merchantUrlEl.value) merchantUrlEl.value = "https://smartpaypasarelas.onrender.com/api/spi/3ds/return";
 
@@ -24,26 +23,23 @@
     logEl.scrollTop = logEl.scrollHeight;
   }
 
-  // ---- Normalizadores requeridos por PTZ ----
+  // ---------- Normalizadores requeridos por PTZ ----------
   // Moneda: ISO-4217 numérico (USD=840, PAB=590)
-  const isoMap = { USD: "840", PAB: "590" };
+  const iso4217 = { USD: "840", PAB: "590" };
 
   // Expiración: convertir entrada de usuario a YYMM (o respetar YYMMDD si ya viene así)
   function normalizeExpiry(input) {
     const s = String(input || '').replace(/\D/g, '');
-    if (s.length === 4) {           // asume MMYY -> YYMM
+    if (s.length === 4) {            // asume MMYY -> YYMM
       const mm = s.slice(0,2), yy = s.slice(2,4);
       return yy + mm;
     }
-    if (s.length === 6) {           // ya es YYMMDD
-      return s;
-    }
-    if (s.length === 5) {           // caso raro: fuerza YYMM con últimos 2 como YY
+    if (s.length === 6) return s;    // ya es YYMMDD
+    if (s.length === 5) {            // caso raro: fuerza YYMM
       const mm = s.slice(0,2), yy = s.slice(-2);
       return yy + mm;
     }
-    // fallback (si ya viene YYMM, queda igual)
-    return s;
+    return s;                        // si ya venía YYMM, queda igual
   }
 
   async function callSale(){
@@ -53,18 +49,18 @@
     if (!merchantUrl) return alert('Configura MerchantResponseUrl');
 
     const rawAmount = Number(amountEl.value || '0');
-    const currNumeric = isoMap[currencyEl.value] || currencyEl.value; // permite numérico directo
-    const normalizedExp = normalizeExpiry(expEl.value);
+    const currencyNumeric = iso4217[currencyEl.value] || currencyEl.value; // permite numérico directo
+    const cardExp = normalizeExpiry(expEl.value);
 
     const body = {
       TotalAmount: rawAmount,
-      CurrencyCode: currNumeric,          // ISO numérico (e.g., 840)
+      CurrencyCode: currencyNumeric,      // ISO numérico (ej: 840)
       ThreeDSecure: true,
       TerminalId: terminalIdEl.value || undefined,
       OrderIdentifier: orderIdEl.value || undefined,
       Source: {
         CardPan: panEl.value,
-        CardExpiration: normalizedExp,    // YYMM (o YYMMDD)
+        CardExpiration: cardExp,          // YYMM (o YYMMDD)
         CardCvv: cvvEl.value
       },
       ExtendedData: {
@@ -82,7 +78,11 @@
       }
     };
 
-    const url = apiBase.replace(/\/+$/,'') + '/api/spi/sale'; // asegura /api/spi/sale
+    // Log del payload que realmente mandamos
+    log('Payload que se enviará a /api/spi/sale:');
+    log(body);
+
+    const url = apiBase.replace(/\/+$/,'') + '/api/spi/sale';
     log(`> POST ${url}`);
     saleStatus.textContent = 'llamando…';
     btn.disabled = true;
@@ -95,18 +95,16 @@
 
       const ctype = (r.headers.get('content-type') || '').toLowerCase();
       log(`HTTP ${r.status} ${r.statusText} — content-type: ${ctype || '(desconocido)'}`);
-
-      // Lee como texto primero (puede ser JSON o HTML del ACS)
       const txt = await r.text();
 
-      // Si es HTML, ábrelo directamente (form de auto-post al ACS)
+      // Si es HTML, es muy probablemente el formulario del ACS
       if (ctype.includes('text/html') || /^<!doctype|<html/i.test(txt)) {
         log('HTML recibido (posible ACS). Abriendo ventana/popup…');
         openHtmlPopup(txt);
         return;
       }
 
-      // Intenta parsear JSON
+      // Intentar parsear JSON
       let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
       log(data);
 
@@ -115,7 +113,7 @@
         openHtmlPopup(data.RedirectHtml);
         return;
       }
-      // 2) URL directa
+      // 2) URL directa de redirección
       if (data && data.RedirectUrl) {
         open(data.RedirectUrl, 'ptz3ds', 'width=430,height=700');
         return;
@@ -140,7 +138,8 @@
   }
 
   function buildAutoPostHtml(actionUrl, fields){
-    const inputs = Object.entries(fields).map(([k,v]) => `<input type="hidden" name="${k}" value="${String(v||'').replace(/\"/g,'&quot;')}" />`).join('');
+    const inputs = Object.entries(fields).map(([k,v]) =>
+      `<input type="hidden" name="${k}" value="${String(v||'').replace(/\"/g,'&quot;')}" />`).join('');
     return `<!doctype html><html><body onload="document.forms[0].submit()">
       <form method="POST" action="${actionUrl}">${inputs}</form>
       <p style="font:14px system-ui">Redirigiendo a ACS…</p>
@@ -153,7 +152,7 @@
     w.document.open(); w.document.write(html); w.document.close();
   }
 
-  // Recibe el SpiToken del callback 3DS y llama a /payment
+  // Recibe el SpiToken del callback y ejecuta /payment
   window.addEventListener('message', async (ev) => {
     if (!ev || !ev.data || ev.data.type !== 'PTZ_3DS_DONE') return;
     const payload = ev.data.payload || {};
@@ -165,7 +164,8 @@
     log(`> POST ${payUrl}`);
     try {
       const r = await fetch(payUrl, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ SpiToken: payload.SpiToken })
       });
       const txt = await r.text();
@@ -176,5 +176,6 @@
 
   btn.addEventListener('click', callSale);
 })();
+
 
 
