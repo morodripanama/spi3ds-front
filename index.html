@@ -1,89 +1,177 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SmartPayPasarelas — SPI 3‑D Secure Tester</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SPI 3DS Demo – SmartPayPasarelas</title>
+  <style>
+    :root{--fg:#111;--muted:#666;--bg:#fff;--card:#f7f7f8;--accent:#0a7;--err:#b00}
+    *{box-sizing:border-box} body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial;color:var(--fg);background:var(--bg)}
+    header{padding:16px 20px;background:var(--card);border-bottom:1px solid #e6e6e9}
+    h1{margin:0;font-size:18px} small{color:var(--muted)}
+    main{max-width:1000px;margin:20px auto;padding:0 16px 40px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+    .card{background:#fff;border:1px solid #e6e6e9;border-radius:12px;box-shadow:0 1px 1px rgba(0,0,0,.03)}
+    .card h2{margin:0;padding:12px 14px;border-bottom:1px solid #eee;font-size:16px}
+    .card .content{padding:12px 14px}
+    label{display:block;font-weight:600;margin-top:10px}
+    input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .muted{color:var(--muted);font-size:12px}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{appearance:none;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;background:var(--accent);color:white}
+    button.secondary{background:#444}
+    pre{white-space:pre-wrap;background:#0b102014;color:#102030;border-radius:10px;padding:10px;max-height:340px;overflow:auto}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef;border:1px solid #dde;color:#334}
+    .checkbox{display:flex;align-items:center;gap:8px;margin-top:10px}
+    .two{grid-column:span 6} .three{grid-column:span 4} .full{grid-column:span 12}
+    @media (max-width:900px){.two,.three{grid-column:span 12} .row,.row-3{grid-template-columns:1fr}}
+  </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>PowerTranz — SPI 3‑D Secure (Tester)</h1>
-  <div class="card">
-    <p class="muted">
-      Backend: <code id="backendUrl">https://smartpaypasarelas.onrender.com</code>
-      &nbsp;|&nbsp; Callback 3DS: <code>https://smartpaypasarelas.onrender.com/api/spi/3ds/return</code>
-    </p>
-  </div>
+  <header>
+    <h1>SPI 3DS – Demo <small class="badge">/api/spi/sale</small></h1>
+  </header>
 
-  <div class="card">
-    <h2>1) Configuración</h2>
-    <div class="row">
-      <div>
-        <label>API_BASE (backend)</label>
-        <input id="apiBase" value="https://smartpaypasarelas.onrender.com" />
-      </div>
-      <div>
-        <label>Merchant Response URL</label>
-        <input id="merchantUrl" value="https://smartpaypasarelas.onrender.com/api/spi/3ds/return" />
-      </div>
-    </div>
-    <div class="row">
-      <div>
-        <label>TerminalId (opcional)</label>
-        <input id="terminalId" placeholder="XXXXXXX" />
-      </div>
-      <div>
-        <label>OrderIdentifier (opcional)</label>
-        <input id="orderId" placeholder="ORDER-12345" />
-      </div>
-    </div>
-  </div>
+  <main>
+    <div class="grid">
 
-  <div class="card">
-    <h2>2) Datos de compra (demo)</h2>
-    <div class="row">
-      <div>
-        <label>Monto</label>
-        <input id="amount" type="number" value="12.34" step="0.01" />
-      </div>
-      <div>
-        <label>Moneda</label>
-        <select id="currency">
-          <option value="USD" selected>USD</option>
-          <option value="PAB">PAB</option>
-        </select>
-      </div>
-    </div>
-    <div class="row">
-      <div>
-        <label>CardPan</label>
-        <input id="pan" value="4111111111111111" />
-      </div>
-      <div>
-        <label>Exp (MMYY)</label>
-        <input id="exp" value="1228" />
-      </div>
-    </div>
-    <div class="row">
-      <div>
-        <label>CVV</label>
-        <input id="cvv" value="123" />
-      </div>
-      <div style="display:flex;align-items:end;gap:12px">
-        <button id="btnSale" class="btn">Iniciar /spi/Sale (3DS)</button>
-        <span id="saleStatus" class="muted"></span>
-      </div>
-    </div>
-  </div>
+      <section class="card two">
+        <h2>Configuración</h2>
+        <div class="content">
+          <label>API Base</label>
+          <input id="apiBase" placeholder="https://smartpaypasarelas.onrender.com">
 
-  <div class="card">
-    <h2>3) Resultado</h2>
-    <pre id="log">Listo.
+          <label>Merchant Response URL</label>
+          <input id="merchantUrl" placeholder="https://smartpaypasarelas.onrender.com/api/spi/3ds/return">
+
+          <div class="row">
+            <div>
+              <label>TerminalId (opcional)</label>
+              <input id="terminalId" placeholder="">
+            </div>
+            <div>
+              <label>Order Identifier</label>
+              <input id="orderId" placeholder="TEST123">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card two">
+        <h2>Monto y Moneda</h2>
+        <div class="content">
+          <div class="row">
+            <div>
+              <label>Monto</label>
+              <input id="amount" type="number" step="0.01" value="12.34">
+            </div>
+            <div>
+              <label>Moneda</label>
+              <select id="currency">
+                <option value="840">USD (840)</option>
+                <option value="590">PAB (590)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card three full">
+        <h2>Datos de tarjeta</h2>
+        <div class="content">
+          <div class="row-3">
+            <div>
+              <label>Card PAN</label>
+              <input id="pan" value="4012000000020006">
+            </div>
+            <div>
+              <label>Expiración <span class="muted">(MM/YY)</span></label>
+              <input id="exp" value="12/28">
+            </div>
+            <div>
+              <label>CVV</label>
+              <input id="cvv" value="123">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card three">
+        <h2>Cliente</h2>
+        <div class="content">
+          <div class="row">
+            <div><label>Nombre</label><input id="firstName" placeholder="Juan"></div>
+            <div><label>Apellido</label><input id="lastName" placeholder="Pérez"></div>
+          </div>
+          <div class="row">
+            <div><label>Email</label><input id="email" placeholder="juan@example.com"></div>
+            <div><label>Teléfono</label><input id="phone" placeholder="+50760000000"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card three">
+        <h2>Billing Address</h2>
+        <div class="content">
+          <label>Dirección 1</label><input id="billLine1" placeholder="Calle 50">
+          <label>Dirección 2</label><input id="billLine2" placeholder="">
+          <div class="row">
+            <div><label>Ciudad</label><input id="billCity" placeholder="Panamá"></div>
+            <div><label>Estado/Provincia</label><input id="billState" placeholder="PA"></div>
+          </div>
+          <div class="row">
+            <div><label>Código Postal</label><input id="billZip" placeholder="0801"></div>
+            <div><label>País (ISO-2)</label><input id="billCountry" placeholder="PA"></div>
+          </div>
+          <div class="checkbox">
+            <input id="shipSame" type="checkbox" checked>
+            <label for="shipSame">Shipping igual a Billing</label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card three">
+        <h2>Shipping Address</h2>
+        <div class="content">
+          <label>Dirección 1</label><input id="shipLine1" placeholder="">
+          <label>Dirección 2</label><input id="shipLine2" placeholder="">
+          <div class="row">
+            <div><label>Ciudad</label><input id="shipCity" placeholder=""></div>
+            <div><label>Estado/Provincia</label><input id="shipState" placeholder=""></div>
+          </div>
+          <div class="row">
+            <div><label>Código Postal</label><input id="shipZip" placeholder=""></div>
+            <div><label>País (ISO-2)</label><input id="shipCountry" placeholder=""></div>
+          </div>
+          <p class="muted">Si está marcado “Shipping igual a Billing”, estos campos se ignorarán.</p>
+        </div>
+      </section>
+
+      <section class="card full">
+        <h2>Acciones</h2>
+        <div class="content">
+          <div class="actions">
+            <button id="btnSale">Iniciar /spi/Sale (3DS)</button>
+            <button id="btnTxn" class="secondary" title="Consulta usando el TransactionIdentifier del último 3DS">Ver estado (GET /transactions/{id})</button>
+          </div>
+          <div id="saleStatus" class="muted" style="margin-top:8px;"></div>
+          <p class="muted">Tras completar 3DS, si llega el SpiToken, se llamará <code>/api/spi/payment</code> automáticamente.</p>
+        </div>
+      </section>
+
+      <section class="card full">
+        <h2>Resultado</h2>
+        <div class="content">
+          <pre id="log">Listo.
 — Pulsa «Iniciar /spi/Sale (3DS)» y sigue el flujo.
 — Tras 3DS, si llega el SpiToken, se llamará /api/spi/payment.</pre>
-  </div>
-</div>
+        </div>
+      </section>
+
+    </div>
+  </main>
 
 <script src="app.js?v=3"></script>
 </body>
