@@ -120,7 +120,6 @@
       CurrencyCode: currencyEl.value,      // ya seleccionas "840"/"590"
       ThreeDSecure: true,
       AddressVerification: true,
-      FraudCheck: true,
       TerminalId: terminalIdEl.value || undefined,
       OrderIdentifier: orderIdEl.value || undefined,
       Source: {
@@ -134,7 +133,6 @@
       AddressMatch: addressMatch,
       ExtendedData: {
         MerchantResponseUrl: merchantUrl,
-        FraudCheck: "Standard",
         BrowserInfo: {
           UserAgent: navigator.userAgent,
           IP: '',
