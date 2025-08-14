@@ -1,34 +1,182 @@
 <!doctype html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SPI 3DS Demo – SmartPayPasarelas</title>
   <style>
-    :root{--fg:#111;--muted:#666;--bg:#fff;--card:#f7f7f8;--accent:#0a7;--err:#b00}
-    *{box-sizing:border-box} body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial;color:var(--fg);background:var(--bg)}
-    header{padding:16px 20px;background:var(--card);border-bottom:1px solid #e6e6e9}
-    h1{margin:0;font-size:18px} small{color:var(--muted)}
-    main{max-width:1000px;margin:20px auto;padding:0 16px 40px}
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
-    .card{background:#fff;border:1px solid #e6e6e9;border-radius:12px;box-shadow:0 1px 1px rgba(0,0,0,.03)}
-    .card h2{margin:0;padding:12px 14px;border-bottom:1px solid #eee;font-size:16px}
-    .card .content{padding:12px 14px}
-    label{display:block;font-weight:600;margin-top:10px}
-    input,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-    .muted{color:var(--muted);font-size:12px}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    button{appearance:none;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;background:var(--accent);color:white}
-    button.secondary{background:#444}
-    pre{white-space:pre-wrap;background:#0b102014;color:#102030;border-radius:10px;padding:10px;max-height:340px;overflow:auto}
-    .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef;border:1px solid #dde;color:#334}
-    .checkbox{display:flex;align-items:center;gap:8px;margin-top:10px}
-    .two{grid-column:span 6} .three{grid-column:span 4} .full{grid-column:span 12}
-    @media (max-width:900px){.two,.three{grid-column:span 12} .row,.row-3{grid-template-columns:1fr}}
+    :root {
+      --fg: #111;
+      --muted: #666;
+      --bg: #fff;
+      --card: #f7f7f8;
+      --accent: #0a7;
+      --err: #b00
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      font: 14px/1.4 system-ui, Segoe UI, Roboto, Helvetica, Arial;
+      color: var(--fg);
+      background: var(--bg)
+    }
+
+    header {
+      padding: 16px 20px;
+      background: var(--card);
+      border-bottom: 1px solid #e6e6e9
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px
+    }
+
+    small {
+      color: var(--muted)
+    }
+
+    main {
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 0 16px 40px
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e6e6e9;
+      border-radius: 12px;
+      box-shadow: 0 1px 1px rgba(0, 0, 0, .03)
+    }
+
+    .card h2 {
+      margin: 0;
+      padding: 12px 14px;
+      border-bottom: 1px solid #eee;
+      font-size: 16px
+    }
+
+    .card .content {
+      padding: 12px 14px
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-top: 10px
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px
+    }
+
+    .row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--accent);
+      color: white
+    }
+
+    button.secondary {
+      background: #444
+    }
+
+    pre {
+      white-space: pre-wrap;
+      background: #0b102014;
+      color: #102030;
+      border-radius: 10px;
+      padding: 10px;
+      max-height: 340px;
+      overflow: auto
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #eef;
+      border: 1px solid #dde;
+      color: #334
+    }
+
+    .checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px
+    }
+
+    .two {
+      grid-column: span 6
+    }
+
+    .three {
+      grid-column: span 4
+    }
+
+    .full {
+      grid-column: span 12
+    }
+
+    @media (max-width:900px) {
+
+      .two,
+      .three {
+        grid-column: span 12
+      }
+
+      .row,
+      .row-3 {
+        grid-template-columns: 1fr
+      }
+    }
   </style>
 </head>
+
 <body>
   <header>
     <h1>SPI 3DS – Demo <small class="badge">/api/spi/sale</small></h1>
@@ -41,10 +189,10 @@
         <h2>Configuración</h2>
         <div class="content">
           <label>API Base</label>
-          <input id="apiBase" placeholder="https://smartpaypasarelas.onrender.com">
+          <input id="apiBase" value="https://smartpaypasarelas.onrender.com">
 
           <label>Merchant Response URL</label>
-          <input id="merchantUrl" placeholder="https://smartpaypasarelas.onrender.com/api/spi/3ds/return">
+          <input id="merchantUrl" value="https://smartpaypasarelas.onrender.com/api/spi/3ds/return">
 
           <div class="row">
             <div>
@@ -53,7 +201,7 @@
             </div>
             <div>
               <label>Order Identifier</label>
-              <input id="orderId" placeholder="TEST123">
+              <input id="orderId" value="TEST123">
             </div>
           </div>
         </div>
@@ -102,12 +250,12 @@
         <h2>Cliente</h2>
         <div class="content">
           <div class="row">
-            <div><label>Nombre</label><input id="firstName" placeholder="Juan"></div>
-            <div><label>Apellido</label><input id="lastName" placeholder="Pérez"></div>
+            <div><label>Nombre</label><input id="firstName" value="Moises"></div>
+            <div><label>Apellido</label><input id="lastName" value="Rodriguez"></div>
           </div>
           <div class="row">
-            <div><label>Email</label><input id="email" placeholder="juan@example.com"></div>
-            <div><label>Teléfono</label><input id="phone" placeholder="+50760000000"></div>
+            <div><label>Email</label><input id="email" value="morodri@smart-retail-group.com"></div>
+            <div><label>Teléfono</label><input id="phone" value="+50766788044"></div>
           </div>
         </div>
       </section>
@@ -115,15 +263,15 @@
       <section class="card three">
         <h2>Billing Address</h2>
         <div class="content">
-          <label>Dirección 1</label><input id="billLine1" placeholder="Calle 50">
-          <label>Dirección 2</label><input id="billLine2" placeholder="">
+          <label>Dirección 1</label><input id="billLine1" value="Calle 50">
+          <label>Dirección 2</label><input id="billLine2" value="">
           <div class="row">
-            <div><label>Ciudad</label><input id="billCity" placeholder="Panamá"></div>
-            <div><label>Estado/Provincia</label><input id="billState" placeholder="PA"></div>
+            <div><label>Ciudad</label><input id="billCity" value="Panamá"></div>
+            <div><label>Estado/Provincia</label><input id="billState" value="PA"></div>
           </div>
           <div class="row">
-            <div><label>Código Postal</label><input id="billZip" placeholder="0801"></div>
-            <div><label>País (ISO-2)</label><input id="billCountry" placeholder="PA"></div>
+            <div><label>Código Postal</label><input id="billZip" value="0801"></div>
+            <div><label>País (ISO-2)</label><input id="billCountry" value="PA"></div>
           </div>
           <div class="checkbox">
             <input id="shipSame" type="checkbox" checked>
@@ -154,10 +302,12 @@
         <div class="content">
           <div class="actions">
             <button id="btnSale">Iniciar /spi/Sale (3DS)</button>
-            <button id="btnTxn" class="secondary" title="Consulta usando el TransactionIdentifier del último 3DS">Ver estado (GET /transactions/{id})</button>
+            <button id="btnTxn" class="secondary" title="Consulta usando el TransactionIdentifier del último 3DS">Ver
+              estado (GET /transactions/{id})</button>
           </div>
           <div id="saleStatus" class="muted" style="margin-top:8px;"></div>
-          <p class="muted">Tras completar 3DS, si llega el SpiToken, se llamará <code>/api/spi/payment</code> automáticamente.</p>
+          <p class="muted">Tras completar 3DS, si llega el SpiToken, se llamará <code>/api/spi/payment</code>
+            automáticamente.</p>
         </div>
       </section>
 
@@ -173,6 +323,7 @@
     </div>
   </main>
 
-<script src="app.js?v=3"></script>
+  <script src="app.js?v=3"></script>
 </body>
+
 </html>
