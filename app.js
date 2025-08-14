@@ -152,6 +152,26 @@
     w.document.open(); w.document.write(html); w.document.close();
   }
 
+  function prettyPayment(r) {
+  if (!r || typeof r !== 'object') return 'Respuesta vacía';
+  const iso = r.IsoResponseCode || r.ResponseCode || '';
+  const msg = r.ResponseMessage || '';
+  const approved = r.Approved ?? (iso === '00'); // si algún payload trae Approved
+  const id = r.TransactionIdentifier || '';
+  const amount = r.TotalAmount != null ? r.TotalAmount : '';
+  const eci = r.RiskManagement?.ThreeDSecure?.Eci;
+  const authStat = r.RiskManagement?.ThreeDSecure?.AuthenticationStatus;
+
+  return [
+    `Estado: ${approved ? 'APROBADO ✅' : 'PROCESADO'}`,
+    `IsoResponseCode: ${iso} ${msg ? `(${msg})` : ''}`,
+    eci ? `ECI: ${eci}` : null,
+    authStat ? `3DS Status: ${authStat}` : null,
+    `Monto: ${amount}  Moneda: ${r.CurrencyCode || ''}`,
+    `TxnId: ${id}`
+  ].filter(Boolean).join('\n');
+}
+
   // Recibe el SpiToken del callback y ejecuta /payment
 window.addEventListener('message', async (ev) => {
   if (!ev || !ev.data || ev.data.type !== 'PTZ_3DS_DONE') return;
@@ -172,7 +192,7 @@ window.addEventListener('message', async (ev) => {
     });
     const txt = await r.text();
     let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-    log('> /api/spi/payment respuesta:'); log(data);
+    log('> /api/spi/payment respuesta:'); log(data); log(prettyPayment(data));
   } catch(e) { log(e.message || e.toString()); }
 });
 
