@@ -259,6 +259,82 @@
   });
 
   btnSale.addEventListener('click', callSale);
+  async function doAuth(){
+  const apiBase = apiBaseEl.value.trim().replace(/\/+$/,'');
+  const threeDS = !document.querySelector('#authNo3ds')?.checked; // por defecto con 3DS
+
+  // Construye el payload igual que sale, solo cambia el endpoint
+  const payload = {
+    TotalAmount: Number(totalAmountEl.value || '0'),
+    CurrencyCode: currencyEl.value || '840',
+    AddressVerification: true,
+    ThreeDSecure: threeDS,
+    Source: {
+      CardPan:  panEl.value.trim(),
+      CardExpiration: expEl.value.trim(), // YYMM (ej: "2812")
+      CardCvv: cvvEl.value.trim(),
+      CardholderName: cardholderEl.value.trim()
+    },
+    OrderIdentifier: orderIdEl.value.trim() || 'TEST_AUTH',
+    BillingAddress: buildBilling(),      // usa las mismas helpers que ya tienes
+    ShippingAddress: buildShipping(),
+    AddressMatch: true,
+    ExtendedData: {
+      MerchantResponseUrl: merchantResponseUrlEl.value.trim(), // tu /api/spi/3ds/return
+      BrowserInfo: buildBrowserInfo()    // el mismo que ya usas para sale
+    }
+  };
+
+  const url = `${apiBase}/api/spi/auth`;
+  log(`> POST ${url}`);
+  log('Payload a /api/spi/Auth => ' + JSON.stringify(payload));
+
+  const r = await fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+
+  const txt = await r.text();
+  let data; try{ data = JSON.parse(txt); } catch { data = { raw: txt }; }
+  log(data);
+
+  // Tres posibilidades:
+  // A) Auth con 3DS -> te devuelven HTML/redirect (ya lo manejas con popup) y luego Mensaje 3DS con SpiToken
+  // B) Frictionless -> el mismo /api/spi/auth puede devolver Approved=true sin 3DS
+  // C) Si /spi/auth devuelve objeto con SpiToken directamente, llama /api/spi/payment
+
+  // Si viene SpiToken directo (sin necesidad de popup) completa con /payment:
+  const spiToken = data?.SpiToken || data?.Response?.SpiToken;
+  const txnId    = data?.TransactionIdentifier || data?.Response?.TransactionIdentifier;
+
+  if (spiToken) {
+    lastTxnId = txnId || lastTxnId;
+    await completeWithPayment(spiToken, txnId); // reutiliza tu función de /api/spi/payment
+  } else {
+    // Si era con 3DS y tu flujo ya abrió el popup, el callback /3ds/return te manda el token por postMessage,
+    // y tu listener existente ya llama a /api/spi/payment automáticamente.
+    // No hay que hacer nada aquí.
+  }
+}
+
+// registra el listener del botón
+document.querySelector('#btnAuth3ds')?.addEventListener('click', doAuth);
+
+// Helper para cerrar con payment (si no lo tienes ya como función aislada)
+async function completeWithPayment(spiToken, txnId){
+  const apiBase = apiBaseEl.value.trim().replace(/\/+$/,'');
+  const url = `${apiBase}/api/spi/payment`;
+  const body = { SpiToken: spiToken, TransactionIdentifier: txnId || undefined };
+  log('> POST ' + url);
+  log('Body => ' + JSON.stringify(body));
+  const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  const txt = await r.text(); let resp; try{ resp = JSON.parse(txt);}catch{ resp = { raw: txt }; }
+  log(resp);
+  lastTxnId = resp?.TransactionIdentifier || lastTxnId;
+  log(prettyPayment(resp));
+}
+
 
   async function doCapture(){
   const apiBase = apiBaseEl.value.trim();
