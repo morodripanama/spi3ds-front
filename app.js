@@ -256,9 +256,17 @@
   async function doAuth() {
     const apiBase = apiBaseEl.value.trim().replace(/\/+$/, '');
     const threeDS = !document.querySelector('#authNo3ds')?.checked; // por defecto con 3DS
+    // Normaliza el campo en app.js
+    const expRaw = expEl.value.trim(); // "12/28"
+    const expNormalized = expRaw.replace("/", ""); // "1228"
+
     if (!panEl.value.trim()) return alert("Falta el número de tarjeta");
     if (!expEl.value.trim() || expEl.value.length < 4) return alert("Fecha de expiración inválida");
     if (!cvvEl.value.trim() || cvvEl.value.length < 3) return alert("CVV inválido");
+    if (!/^\d{2}\/\d{2}$/.test(expRaw)) {
+      return alert("Formato de expiración inválido. Usa MM/YY");
+    }
+
     // Construye el payload igual que sale, solo cambia el endpoint
     const payload = {
       TotalAmount: Number(amountEl.value || '0'),
@@ -267,7 +275,7 @@
       ThreeDSecure: threeDS,
       Source: {
         CardPan: panEl.value.trim(),
-        CardExpiration: expEl.value.trim(), // YYMM (ej: "2812")
+        CardExpiration: expNormalized, // YYMM (ej: "2812")
         CardCvv: cvvEl.value.trim(),
         CardholderName: [firstName.value, lastName.value].join(' ').trim()
       },
