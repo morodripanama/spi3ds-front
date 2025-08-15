@@ -259,6 +259,60 @@
   });
 
   btnSale.addEventListener('click', callSale);
+
+  async function doCapture(){
+  const apiBase = apiBaseEl.value.trim();
+  const id = prompt('Txn a capturar', lastTxnId || '');
+  if(!id) return;
+  const amount = prompt('Monto a capturar (vacío = total)', '');
+  const url = apiBase.replace(/\/+$/,'') + `/api/transactions/${encodeURIComponent(id)}/capture`;
+  log(`> POST ${url}`);
+  const body = amount ? { TotalAmount: Number(amount) } : {};
+  const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const txt = await r.text(); let data; try{data=JSON.parse(txt);}catch{data={raw:txt};}
+  log(data); log(prettyPayment(data));
+}
+
+async function doVoid(){
+  const apiBase = apiBaseEl.value.trim();
+  const id = prompt('Txn a anular (void)', lastTxnId || '');
+  if(!id) return;
+  const url = apiBase.replace(/\/+$/,'') + `/api/transactions/${encodeURIComponent(id)}/void`;
+  log(`> POST ${url}`);
+  const r = await fetch(url,{method:'POST'});
+  const txt = await r.text(); let data; try{data=JSON.parse(txt);}catch{data={raw:txt};}
+  log(data); log(prettyPayment(data));
+}
+
+async function doRefund(){
+  const apiBase = apiBaseEl.value.trim();
+  const id = prompt('Txn a reembolsar', lastTxnId || '');
+  if(!id) return;
+  const amount = prompt('Monto a reembolsar (vacío = total)', '');
+  const url = apiBase.replace(/\/+$/,'') + `/api/transactions/${encodeURIComponent(id)}/refund`;
+  log(`> POST ${url}`);
+  const body = amount ? { TotalAmount: Number(amount) } : {};
+  const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const txt = await r.text(); let data; try{data=JSON.parse(txt);}catch{data={raw:txt};}
+  log(data); log(prettyPayment(data));
+}
+
+async function doSearch(){
+  const apiBase = apiBaseEl.value.trim();
+  const orderId = prompt('Buscar por OrderIdentifier (opcional)','TEST123') || '';
+  const url = apiBase.replace(/\/+$/,'') + `/api/transactions` + (orderId ? `?orderId=${encodeURIComponent(orderId)}` : '');
+  log(`> GET ${url}`);
+  const r = await fetch(url);
+  const txt = await r.text(); let data; try{data=JSON.parse(txt);}catch{data={raw:txt};}
+  log(data);
+}
+
+// listeners
+document.querySelector('#btnCapture')?.addEventListener('click', doCapture);
+document.querySelector('#btnVoid')?.addEventListener('click', doVoid);
+document.querySelector('#btnRefund')?.addEventListener('click', doRefund);
+document.querySelector('#btnSearch')?.addEventListener('click', doSearch);
+
 })();
 
 

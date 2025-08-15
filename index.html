@@ -304,6 +304,12 @@
             <button id="btnSale">Iniciar /spi/Sale (3DS)</button>
             <button id="btnTxn" class="secondary" title="Consulta usando el TransactionIdentifier del último 3DS">Ver
               estado (GET /transactions/{id})</button>
+            <button id="btnCapture" class="secondary" title="Capturar transacción">Capturar
+              (/transactions/{id}/capture)</button>
+            <button id="btnVoid" class="secondary" title="Anular (/transactions/{id}/void)">Anular</button>
+            <button id="btnRefund" class="secondary" title="Reembolsar (/transactions/{id}/refund)">Reembolsar</button>
+            <button id="btnSearch" class="secondary" title="Buscar transacciones">Buscar (GET /transactions)</button>
+
           </div>
           <div id="saleStatus" class="muted" style="margin-top:8px;"></div>
           <p class="muted">Tras completar 3DS, si llega el SpiToken, se llamará <code>/api/spi/payment</code>
