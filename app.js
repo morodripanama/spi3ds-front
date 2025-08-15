@@ -388,6 +388,27 @@ document.querySelector('#btnCapture')?.addEventListener('click', doCapture);
 document.querySelector('#btnVoid')?.addEventListener('click', doVoid);
 document.querySelector('#btnRefund')?.addEventListener('click', doRefund);
 document.querySelector('#btnSearch')?.addEventListener('click', doSearch);
+document.getElementById('btnAuth3ds').addEventListener('click', async () => {
+  const url = api('/spi/auth');
+
+  const payload = buildPayload(); // Usa la misma función de construcción de payload que en /spi/sale
+  payload.ThreeDSecure = {
+    MerchantResponseUrl: getVal('merchantUrl')
+  };
+
+  if (document.getElementById('authNo3ds').checked) {
+    payload.ThreeDSecure = null;
+  }
+
+  const res = await postJson(url, payload);
+  log(res);
+
+  if (res && res.RedirectUrl) {
+    log('Redirigiendo a ' + res.RedirectUrl);
+    location.href = res.RedirectUrl;
+  }
+});
+
 
 })();
 
