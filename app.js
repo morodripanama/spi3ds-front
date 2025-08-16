@@ -150,10 +150,13 @@
         }
       }
     };
+
     const url = apiBase.replace(/\/+$/, '') + '/api/spi/sale';
     log('Payload que se enviará a /api/spi/sale:');
     log(body);
     log(`> POST ${url}`);
+
+
     saleStatus.textContent = 'llamando…';
     btnSale.disabled = true;
     try {
@@ -197,6 +200,112 @@
     } finally {
       saleStatus.textContent = ''; btnSale.disabled = false;
     }
+  }
+
+  async function doAuth() {
+    const apiBase = apiBaseEl.value.trim();
+    if (!apiBase) return alert('Configura API_BASE');
+    const merchantUrl = merchantUrlEl.value.trim();
+    if (!merchantUrl) return alert('Configura MerchantResponseUrl');
+    const billing = buildAddress('bill');
+    let shipping = undefined;
+    let addressMatch = true;
+    if (!shipSame.checked) {
+      addressMatch = false;
+      shipping = buildAddress('ship');
+    }
+    if (!panEl.value.trim()) return alert("Falta el número de tarjeta");
+    if (!expEl.value.trim() || expEl.value.length < 4) return alert("Fecha de expiración inválida");
+    if (!cvvEl.value.trim() || cvvEl.value.length < 3) return alert("CVV inválido");
+    const body = {
+      TotalAmount: Number(amountEl.value || '0'),
+      CurrencyCode: currencyEl.value,      // ya seleccionas "840"/"590"
+      ThreeDSecure: true,
+      AddressVerification: true,
+      TerminalId: terminalIdEl.value || undefined,
+      OrderIdentifier: orderIdEl.value || undefined,
+      Source: {
+        CardPan: panEl.value.trim(),
+        CardExpiration: normalizeExpiry(expEl.value),
+        CardCvv: cvvEl.value.trim(),
+        CardholderName: [billing.FirstName || '', billing.LastName || ''].join(' ').trim() || undefined
+      },
+      BillingAddress: billing,
+      ShippingAddress: shipping,
+      AddressMatch: addressMatch,
+      ExtendedData: {
+        MerchantResponseUrl: merchantUrl,
+        BrowserInfo: {
+          UserAgent: navigator.userAgent,
+          IP: '',
+          JavascriptEnabled: true,
+          Language: navigator.language,
+          ScreenHeight: String(window.screen.height),
+          ScreenWidth: String(window.screen.width),
+          TimeZone: String(-new Date().getTimezoneOffset() / 60),
+          ColorDepth: String(window.screen.colorDepth)
+        }
+      }
+    };
+
+    const url = `${apiBase}/api/spi/auth`;
+    log(`> POST ${url}`);
+    log('Payload a /api/spi/Auth => ' + JSON.stringify(body));
+
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const ctype = (r.headers.get('content-type') || '').toLowerCase();
+      log(`HTTP ${r.status}  — content-type: ${ctype || '(desconocido)'}`);
+
+      const txt = await r.text();
+
+      // Si es HTML (form auto-post al ACS), ábrelo
+      if (ctype.includes('text/html') || /^<!doctype|<html/i.test(txt)) {
+        log('HTML recibido (posible ACS). Abriendo ventana/popup…');
+        openHtmlPopup(txt);
+        return;
+      }
+      // Intentar JSON
+      let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+      log(data);
+      // 1) HTML embebido en JSON
+      if (data && typeof data.RedirectHtml === 'string' && /<html|<form/i.test(data.RedirectHtml)) {
+        openHtmlPopup(data.RedirectHtml); return;
+      }
+      // 2) URL directa
+      if (data && data.RedirectUrl) { open(data.RedirectUrl, 'ptz3ds', 'width=430,height=700'); return; }
+      // 3) ACS + PaReq
+      const acs = data?.AcsUrl || data?.ACSUrl || data?.ThreeDS?.AcsUrl || data?.ThreeDSecure?.AcsUrl;
+      const pareq = data?.PaReq || data?.PAReq || data?.ThreeDS?.PaReq || data?.ThreeDSecure?.PaReq || data?.Payload;
+      const md = data?.MD || data?.Md || data?.ThreeDS?.MD || data?.ThreeDSecure?.MD;
+      if (acs) {
+        const html = buildAutoPostHtml(acs, { PaReq: pareq || '', TermUrl: merchantUrl, MD: md || '' });
+        openHtmlPopup(html); return;
+      } else {
+        // Si viene SpiToken directo (sin necesidad de popup) completa con /payment:
+        const spiToken = data?.SpiToken || data?.Response?.SpiToken;
+        const txnId = data?.TransactionIdentifier || data?.Response?.TransactionIdentifier;
+        lastAmount = data?.TotalAmount;
+        lastTxnId = txnId || lastTxnId;
+        return;
+      }
+      alert('No se encontró información de redirección 3DS en la respuesta. Revisa el backend/respuesta.');
+    } catch (e) {
+      console.error(e); log('Error en fetch: ' + (e.message || e.toString()));
+    }
+    // Tres posibilidades:
+    // A) Auth con 3DS -> te devuelven HTML/redirect (ya lo manejas con popup) y luego Mensaje 3DS con SpiToken
+    // B) Frictionless -> el mismo /api/spi/auth puede devolver Approved=true sin 3DS
+    // C) Si /spi/auth devuelve objeto con SpiToken directamente, llama /api/spi/payment
+    /*
+    if (spiToken) {      
+      await completeWithPayment(spiToken, txnId); // reutiliza tu función de /api/spi/payment
+    } */
   }
 
   function buildAutoPostHtml(actionUrl, fields) {
@@ -280,87 +389,7 @@
     callSale();
   });
 
-  async function doAuth() {
-    const apiBase = apiBaseEl.value.trim().replace(/\/+$/, '');
-    const threeDS = !document.querySelector('#authNo3ds')?.checked; // por defecto con 3DS
-    // Normaliza el campo en app.js
-    const expRaw = expEl.value.trim(); // "12/28"
 
-    if (!panEl.value.trim()) return alert("Falta el número de tarjeta");
-    if (!expEl.value.trim() || expEl.value.length < 4) return alert("Fecha de expiración inválida");
-    if (!cvvEl.value.trim() || cvvEl.value.length < 3) return alert("CVV inválido");
-    if (!/^\d{2}\/\d{2}$/.test(expRaw)) {
-      return alert("Formato de expiración inválido. Usa MM/YY");
-    }
-
-    const [mm, yy] = expRaw.split('/');
-    const expYYMM = yy + mm; // "2912"
-
-    // Construye el payload igual que sale, solo cambia el endpoint
-    const payload = {
-      TotalAmount: Number(amountEl.value || '0'),
-      CurrencyCode: currencyEl.value || '840',
-      ThreeDSecure: threeDS,
-      Source: {
-        CardPan: panEl.value.trim(),
-        CardExpiration: expYYMM, // YYMM (ej: "2812")
-        CardCvv: cvvEl.value.trim(),
-        CardholderName: [firstName.value, lastName.value].join(' ').trim()
-      },
-      OrderIdentifier: orderIdEl.value.trim() || 'TEST_AUTH',
-      BillingAddress: buildAddress('bill'), 
-      ExtendedData: {
-        MerchantResponseUrl: merchantUrlEl.value.trim(),
-        ThreeDSecure: {
-          ChallengeWindowSize: 4,
-          ChallengeIndicator: "01"
-        },
-        BrowserInfo: {
-          UserAgent: navigator.userAgent,
-          IP: '',
-          JavascriptEnabled: true,
-          Language: navigator.language,
-          ScreenHeight: String(window.screen.height),
-          ScreenWidth: String(window.screen.width),
-          TimeZone: String(-new Date().getTimezoneOffset() / 60),
-          ColorDepth: String(window.screen.colorDepth)
-        }    // el mismo que ya usas para sale
-      }
-    };
-
-    const url = `${apiBase}/api/spi/auth`;
-    log(`> POST ${url}`);
-    log('Payload a /api/spi/Auth => ' + JSON.stringify(payload));
-
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const txt = await r.text();
-    let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-    log(data);
-
-    // Tres posibilidades:
-    // A) Auth con 3DS -> te devuelven HTML/redirect (ya lo manejas con popup) y luego Mensaje 3DS con SpiToken
-    // B) Frictionless -> el mismo /api/spi/auth puede devolver Approved=true sin 3DS
-    // C) Si /spi/auth devuelve objeto con SpiToken directamente, llama /api/spi/payment
-
-    // Si viene SpiToken directo (sin necesidad de popup) completa con /payment:
-    const spiToken = data?.SpiToken || data?.Response?.SpiToken;
-    const txnId = data?.TransactionIdentifier || data?.Response?.TransactionIdentifier;
-    lastAmount = data?.TotalAmount;
-
-    if (spiToken) {
-      lastTxnId = txnId || lastTxnId;
-      await completeWithPayment(spiToken, txnId); // reutiliza tu función de /api/spi/payment
-    } else {
-      // Si era con 3DS y tu flujo ya abrió el popup, el callback /3ds/return te manda el token por postMessage,
-      // y tu listener existente ya llama a /api/spi/payment automáticamente.
-      // No hay que hacer nada aquí.
-    }
-  }
 
   // registra el listener del botón
   document.querySelector('#btnAuth3ds')?.addEventListener('click', () => {
