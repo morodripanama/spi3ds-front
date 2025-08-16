@@ -293,7 +293,7 @@
 
     const [mm, yy] = expRaw.split('/');
     const expYYMM = yy + mm; // "2912"
-    
+
     // Construye el payload igual que sale, solo cambia el endpoint
     const payload = {
       TotalAmount: Number(amountEl.value || '0'),
@@ -382,18 +382,23 @@
 
   async function doCapture() {
     const apiBase = apiBaseEl.value.trim();
-    if (!lastTxnId) {
-      log('No hay TransactionIdentifier disponible para capturar.');
+    const url = apiBase.replace(/\/+$/, '') + `/api/capture`;
+
+    const transactionIdentifier = lastTxnId; // Ya lo tienes cargado
+    const amount = lastAmount; // Debes tener este dato disponible
+
+    if (!transactionIdentifier || !amount) {
+      log("Faltan datos para capturar la transacción.");
       return;
     }
 
-    const url = apiBase.replace(/\/+$/, '') + `/api/transactions/${encodeURIComponent(lastTxnId)}/capture`;
-    log(`> POST ${url}`);
+    const body = {
+      TransactionIdentifier: transactionIdentifier,
+      TotalAmount: Number(amount)
+    };
 
-    // Si tienes el monto capturado previamente, úsalo:
-    const body = (typeof lastAmount === 'number' && !isNaN(lastAmount))
-      ? { TotalAmount: lastAmount }
-      : {};
+    log(`> POST ${url}`);
+    log(`Body: ${JSON.stringify(body)}`);
 
     try {
       const r = await fetch(url, {
@@ -404,14 +409,19 @@
 
       const txt = await r.text();
       let data;
-      try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+      try {
+        data = JSON.parse(txt);
+      } catch {
+        data = { raw: txt };
+      }
+
       log(data);
       log(prettyPayment(data));
-    } catch (e) {
-      log('Error al hacer capture: ' + (e.message || e.toString()));
+    } catch (err) {
+      log("Error en la petición de captura:");
+      log(err);
     }
   }
-
 
   async function doVoid() {
     const apiBase = apiBaseEl.value.trim();
