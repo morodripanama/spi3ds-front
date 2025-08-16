@@ -48,6 +48,7 @@
   // Estado en memoria
   let lastTxnId = null;
   let lastAmount = null;
+  let lastSpiToken = null;
 
   function log(o) {
     const s = (typeof o === 'string') ? o : JSON.stringify(o, null, 2);
@@ -285,13 +286,20 @@
       const md = data?.MD || data?.Md || data?.ThreeDS?.MD || data?.ThreeDSecure?.MD;
       if (acs) {
         const html = buildAutoPostHtml(acs, { PaReq: pareq || '', TermUrl: merchantUrl, MD: md || '' });
-        openHtmlPopup(html); return;
+        openHtmlPopup(html);
+        if (data?.SpiToken) {
+          lastSpiToken = data.SpiToken;
+        }
+        return;
       } else {
         // Si viene SpiToken directo (sin necesidad de popup) completa con /payment:
         const spiToken = data?.SpiToken || data?.Response?.SpiToken;
         const txnId = data?.TransactionIdentifier || data?.Response?.TransactionIdentifier;
-        lastAmount = data?.TotalAmount;
+        lastAmount = data.TotalAmount;
         lastTxnId = txnId || lastTxnId;
+        if (data?.SpiToken) {
+          lastSpiToken = data.SpiToken;
+        }
         return;
       }
       alert('No se encontró información de redirección 3DS en la respuesta. Revisa el backend/respuesta.');
@@ -346,8 +354,12 @@
     const apiBase = apiBaseEl.value.trim();
     const payUrl = apiBase.replace(/\/+$/, '') + '/api/spi/payment';
     const autoComplete = flowType === "sale";
+    if (resp?.SpiToken) {
+      lastSpiToken = payload.SpiToken;
+    }
+    /*
     log(`> POST ${payUrl}`);
-
+    
     try {
       const r = await fetch(payUrl, {
         method: 'POST',
@@ -366,7 +378,7 @@
       log(prettyPayment(data));
     } catch (e) {
       log(e.message || e.toString());
-    }
+    }*/
   });
 
   // Botón: consulta directa GET /transactions/{id}
@@ -389,7 +401,13 @@
     callSale();
   });
 
-
+  document.querySelector('#btnCompletePayment')?.addEventListener('click', () => {
+    if (!lastSpiToken) {
+      log("No hay SpiToken disponible para completar el pago.");
+      return;
+    }
+    completeWithPayment(lastSpiToken, lastTxnId);
+  });
 
   // registra el listener del botón
   document.querySelector('#btnAuth3ds')?.addEventListener('click', () => {
