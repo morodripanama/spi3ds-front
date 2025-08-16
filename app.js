@@ -220,6 +220,8 @@
     log('Mensaje 3DS recibido'); log(payload);
 
     lastTxnId = payload.TransactionIdentifier || payload.Response?.TransactionIdentifier || null;
+    lastAmount = payload.TotalAmount || payload.Response?.TotalAmount || null;
+
     if (!payload.SpiToken) {
       log('No llegó SpiToken; revisa el callback.');
       return;
