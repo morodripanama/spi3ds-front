@@ -217,9 +217,7 @@
     if (!ev || !ev.data || ev.data.type !== 'PTZ_3DS_DONE') return;
 
     const payload = ev.data.payload || {};
-    log('Mensaje 3DS recibido');
-    log(payload);
-
+    log('Mensaje 3DS recibido'); log(payload);
     lastTxnId = payload.TransactionIdentifier || payload.Response?.TransactionIdentifier || null;
 
     if (!payload.SpiToken) {
@@ -227,17 +225,19 @@
       return;
     }
 
-    const apiBase = apiBaseEl.value.trim();
-    const payUrl = apiBase.replace(/\/+$/, '') + '/api/spi/payment';
+    // Guardar para consulta manual o uso posterior
+    window._lastSpiToken = payload.SpiToken;
 
-    if (flowType !== 'sale') {
-      log('Flujo AUTH: no se ejecuta automáticamente /payment');
-      return;
+    if (flowType === "auth") {
+      log("→ AUTH finalizado correctamente. No se llamará /payment.");
+      return; // ⛔ NO HACER PAYMENT
     }
 
-    const autoComplete = true;
-
+    // Solo se ejecuta si es SALE
+    const apiBase = apiBaseEl.value.trim();
+    const payUrl = apiBase.replace(/\/+$/, '') + '/api/spi/payment';
     log(`> POST ${payUrl}`);
+
     try {
       const r = await fetch(payUrl, {
         method: 'POST',
@@ -245,25 +245,19 @@
         body: JSON.stringify({
           SpiToken: payload.SpiToken,
           TransactionIdentifier: lastTxnId,
-          AutoComplete: autoComplete
+          AutoComplete: true // siempre true en SALE
         })
       });
-
       const txt = await r.text();
       let data;
-      try {
-        data = JSON.parse(txt);
-      } catch {
-        data = { raw: txt };
-      }
-
-      log('> /api/spi/payment respuesta:');
-      log(data);
+      try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+      log('> /api/spi/payment respuesta:'); log(data);
       log(prettyPayment(data));
     } catch (e) {
       log(e.message || e.toString());
     }
   });
+
 
 
   // Botón: consulta directa GET /transactions/{id}
