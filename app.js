@@ -47,6 +47,7 @@
 
   // Estado en memoria
   let lastTxnId = null;
+  let lastAmount = null;
 
   function log(o) {
     const s = (typeof o === 'string') ? o : JSON.stringify(o, null, 2);
@@ -215,27 +216,25 @@
 
   window.addEventListener('message', async (ev) => {
     if (!ev || !ev.data || ev.data.type !== 'PTZ_3DS_DONE') return;
-
     const payload = ev.data.payload || {};
     log('Mensaje 3DS recibido'); log(payload);
-    lastTxnId = payload.TransactionIdentifier || payload.Response?.TransactionIdentifier || null;
 
+    lastTxnId = payload.TransactionIdentifier || payload.Response?.TransactionIdentifier || null;
     if (!payload.SpiToken) {
       log('No llegó SpiToken; revisa el callback.');
       return;
     }
 
-    // Guardar para consulta manual o uso posterior
-    window._lastSpiToken = payload.SpiToken;
-
+    // Guardamos para el capture posterior si fuera auth
     if (flowType === "auth") {
-      log("→ AUTH finalizado correctamente. No se llamará /payment.");
-      return; // ⛔ NO HACER PAYMENT
+      log("Flujo AUTH detectado. No se hará Payment aún.");
+      log(`TransactionIdentifier: ${lastTxnId}`);
+      return;
     }
 
-    // Solo se ejecuta si es SALE
     const apiBase = apiBaseEl.value.trim();
     const payUrl = apiBase.replace(/\/+$/, '') + '/api/spi/payment';
+    const autoComplete = flowType === "sale";
     log(`> POST ${payUrl}`);
 
     try {
@@ -245,20 +244,19 @@
         body: JSON.stringify({
           SpiToken: payload.SpiToken,
           TransactionIdentifier: lastTxnId,
-          AutoComplete: true // siempre true en SALE
+          AutoComplete: autoComplete
         })
       });
       const txt = await r.text();
       let data;
       try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-      log('> /api/spi/payment respuesta:'); log(data);
+      log('> /api/spi/payment respuesta:');
+      log(data);
       log(prettyPayment(data));
     } catch (e) {
       log(e.message || e.toString());
     }
   });
-
-
 
   // Botón: consulta directa GET /transactions/{id}
   btnTxn.addEventListener('click', async () => {
@@ -295,7 +293,7 @@
 
     const [mm, yy] = expRaw.split('/');
     const expYYMM = yy + mm; // "2912"
-
+    
     // Construye el payload igual que sale, solo cambia el endpoint
     const payload = {
       TotalAmount: Number(amountEl.value || '0'),
@@ -349,6 +347,7 @@
     // Si viene SpiToken directo (sin necesidad de popup) completa con /payment:
     const spiToken = data?.SpiToken || data?.Response?.SpiToken;
     const txnId = data?.TransactionIdentifier || data?.Response?.TransactionIdentifier;
+    lastAmount = data?.TotalAmount;
 
     if (spiToken) {
       lastTxnId = txnId || lastTxnId;
@@ -383,16 +382,36 @@
 
   async function doCapture() {
     const apiBase = apiBaseEl.value.trim();
-    const id = prompt('Txn a capturar', lastTxnId || '');
-    if (!id) return;
-    const amount = prompt('Monto a capturar (vacío = total)', '');
-    const url = apiBase.replace(/\/+$/, '') + `/api/transactions/${encodeURIComponent(id)}/capture`;
+    if (!lastTxnId) {
+      log('No hay TransactionIdentifier disponible para capturar.');
+      return;
+    }
+
+    const url = apiBase.replace(/\/+$/, '') + `/api/transactions/${encodeURIComponent(lastTxnId)}/capture`;
     log(`> POST ${url}`);
-    const body = amount ? { TotalAmount: Number(amount) } : {};
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const txt = await r.text(); let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-    log(data); log(prettyPayment(data));
+
+    // Si tienes el monto capturado previamente, úsalo:
+    const body = (typeof lastAmount === 'number' && !isNaN(lastAmount))
+      ? { TotalAmount: lastAmount }
+      : {};
+
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const txt = await r.text();
+      let data;
+      try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+      log(data);
+      log(prettyPayment(data));
+    } catch (e) {
+      log('Error al hacer capture: ' + (e.message || e.toString()));
+    }
   }
+
 
   async function doVoid() {
     const apiBase = apiBaseEl.value.trim();
