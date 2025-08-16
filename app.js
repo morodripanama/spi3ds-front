@@ -38,6 +38,9 @@
   const btnSale = $('#btnSale');
   const btnTxn = $('#btnTxn');
 
+  let flowType = null; // Puede ser "sale" o "auth"
+
+
   // Defaults para tu deploy
   if (apiBaseEl && !apiBaseEl.value) apiBaseEl.value = "https://smartpaypasarelas.onrender.com";
   if (merchantUrlEl && !merchantUrlEl.value) merchantUrlEl.value = "https://smartpaypasarelas.onrender.com/api/spi/3ds/return";
@@ -220,13 +223,15 @@
     if (!payload.SpiToken) { log('No llegó SpiToken; revisa el callback.'); return; }
     const apiBase = apiBaseEl.value.trim();
     const payUrl = apiBase.replace(/\/+$/, '') + '/api/spi/payment';
+    const autoComplete = flowType === "sale";
     log(`> POST ${payUrl}`);
     try {
       const r = await fetch(payUrl, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           SpiToken: payload.SpiToken,
-          TransactionIdentifier: lastTxnId
+          TransactionIdentifier: lastTxnId,
+          AutoComplete: autoComplete
         })
       });
       const txt = await r.text();
@@ -251,14 +256,16 @@
     } catch (e) { log(e.message || e.toString()); }
   });
 
-  btnSale.addEventListener('click', callSale);
+  btnSale.addEventListener('click', () => {
+    flowType = "sale";
+    callSale();
+  });
 
   async function doAuth() {
     const apiBase = apiBaseEl.value.trim().replace(/\/+$/, '');
     const threeDS = !document.querySelector('#authNo3ds')?.checked; // por defecto con 3DS
     // Normaliza el campo en app.js
     const expRaw = expEl.value.trim(); // "12/28"
-    const expNormalized = expRaw.replace("/", ""); // "1228"
 
     if (!panEl.value.trim()) return alert("Falta el número de tarjeta");
     if (!expEl.value.trim() || expEl.value.length < 4) return alert("Fecha de expiración inválida");
@@ -266,6 +273,9 @@
     if (!/^\d{2}\/\d{2}$/.test(expRaw)) {
       return alert("Formato de expiración inválido. Usa MM/YY");
     }
+
+    const [mm, yy] = expRaw.split('/');
+    const expYYMM = yy + mm; // "2912"
 
     // Construye el payload igual que sale, solo cambia el endpoint
     const payload = {
@@ -275,7 +285,7 @@
       ThreeDSecure: threeDS,
       Source: {
         CardPan: panEl.value.trim(),
-        CardExpiration: expNormalized, // YYMM (ej: "2812")
+        CardExpiration: expYYMM, // YYMM (ej: "2812")
         CardCvv: cvvEl.value.trim(),
         CardholderName: [firstName.value, lastName.value].join(' ').trim()
       },
@@ -332,7 +342,10 @@
   }
 
   // registra el listener del botón
-  document.querySelector('#btnAuth3ds')?.addEventListener('click', doAuth);
+  document.querySelector('#btnAuth3ds')?.addEventListener('click', () => {
+    flowType = "auth";
+    doAuth();
+  });
 
   // Helper para cerrar con payment (si no lo tienes ya como función aislada)
   async function completeWithPayment(spiToken, txnId) {
