@@ -354,9 +354,9 @@
     const apiBase = apiBaseEl.value.trim();
     const payUrl = apiBase.replace(/\/+$/, '') + '/api/spi/payment';
     const autoComplete = flowType === "sale";
-    if (resp?.SpiToken) {
-      lastSpiToken = payload.SpiToken;
-    }
+
+    lastSpiToken = payload.SpiToken;
+
     /*
     log(`> POST ${payUrl}`);
     
