@@ -300,7 +300,6 @@
     const payload = {
       TotalAmount: Number(amountEl.value || '0'),
       CurrencyCode: currencyEl.value || '840',
-      AddressVerification: true,
       ThreeDSecure: threeDS,
       Source: {
         CardPan: panEl.value.trim(),
@@ -309,11 +308,13 @@
         CardholderName: [firstName.value, lastName.value].join(' ').trim()
       },
       OrderIdentifier: orderIdEl.value.trim() || 'TEST_AUTH',
-      BillingAddress: buildAddress('bill'),      // usa las mismas helpers que ya tienes
-      ShippingAddress: buildAddress('ship'),
-      AddressMatch: true,
+      BillingAddress: buildAddress('bill'), 
       ExtendedData: {
-        MerchantResponseUrl: merchantUrlEl.value.trim(), // tu /api/spi/3ds/return
+        MerchantResponseUrl: merchantUrlEl.value.trim(),
+        ThreeDSecure: {
+          ChallengeWindowSize: 4,
+          ChallengeIndicator: "01"
+        },
         BrowserInfo: {
           UserAgent: navigator.userAgent,
           IP: '',
