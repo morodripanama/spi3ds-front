@@ -436,7 +436,7 @@
         body: JSON.stringify({
           SpiToken: lastSpiToken,
           TransactionIdentifier: lastTxnId,
-          AutoComplete: autoComplete
+          AutoComplete: true
         })
       });
       const txt = await r.text();
