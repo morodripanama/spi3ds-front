@@ -343,7 +343,7 @@
       log('No llegó SpiToken; revisa el callback.');
       return;
     }
-
+    lastSpiToken = payload.SpiToken;
     // Guardamos para el capture posterior si fuera auth
     if (flowType === "auth") {
       log("Flujo AUTH detectado. No se hará Payment aún.");
@@ -354,10 +354,7 @@
     const apiBase = apiBaseEl.value.trim();
     const payUrl = apiBase.replace(/\/+$/, '') + '/api/spi/payment';
     const autoComplete = flowType === "sale";
-
-    lastSpiToken = payload.SpiToken;
-
-    /*
+    
     log(`> POST ${payUrl}`);
     
     try {
@@ -378,7 +375,7 @@
       log(prettyPayment(data));
     } catch (e) {
       log(e.message || e.toString());
-    }*/
+    }
   });
 
   // Botón: consulta directa GET /transactions/{id}
@@ -417,6 +414,7 @@
 
   // Helper para cerrar con payment (si no lo tienes ya como función aislada)
   async function completeWithPayment(spiToken, txnId) {
+    /*
     const apiBase = apiBaseEl.value.trim().replace(/\/+$/, '');
     const url = `${apiBase}/api/spi/payment`;
     const body = { SpiToken: spiToken, TransactionIdentifier: txnId || undefined };
@@ -426,7 +424,30 @@
     const txt = await r.text(); let resp; try { resp = JSON.parse(txt); } catch { resp = { raw: txt }; }
     log(resp);
     lastTxnId = resp?.TransactionIdentifier || lastTxnId;
-    log(prettyPayment(resp));
+    log(prettyPayment(resp));*/
+    const apiBase = apiBaseEl.value.trim();
+    const payUrl = apiBase.replace(/\/+$/, '') + '/api/spi/payment';
+    log(`> POST ${payUrl}`);
+    
+    try {
+      const r = await fetch(payUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          SpiToken: lastSpiToken,
+          TransactionIdentifier: lastTxnId,
+          AutoComplete: autoComplete
+        })
+      });
+      const txt = await r.text();
+      let data;
+      try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+      log('> /api/spi/payment respuesta:');
+      log(data);
+      log(prettyPayment(data));
+    } catch (e) {
+      log(e.message || e.toString());
+    }
   }
 
 
