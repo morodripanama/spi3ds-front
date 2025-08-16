@@ -213,33 +213,58 @@
     w.document.open(); w.document.write(html); w.document.close();
   }
 
-  // Recibe el SpiToken del callback 3DS y llama a /payment
   window.addEventListener('message', async (ev) => {
     if (!ev || !ev.data || ev.data.type !== 'PTZ_3DS_DONE') return;
+
     const payload = ev.data.payload || {};
-    log('Mensaje 3DS recibido'); log(payload);
-    // Guarda último TransactionIdentifier para consultas manuales
+    log('Mensaje 3DS recibido');
+    log(payload);
+
     lastTxnId = payload.TransactionIdentifier || payload.Response?.TransactionIdentifier || null;
-    if (!payload.SpiToken) { log('No llegó SpiToken; revisa el callback.'); return; }
+
+    if (!payload.SpiToken) {
+      log('No llegó SpiToken; revisa el callback.');
+      return;
+    }
+
     const apiBase = apiBaseEl.value.trim();
     const payUrl = apiBase.replace(/\/+$/, '') + '/api/spi/payment';
-    const autoComplete = flowType === "sale";
+
+    if (flowType !== 'sale') {
+      log('Flujo AUTH: no se ejecuta automáticamente /payment');
+      return;
+    }
+
+    const autoComplete = true;
+
     log(`> POST ${payUrl}`);
     try {
       const r = await fetch(payUrl, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           SpiToken: payload.SpiToken,
           TransactionIdentifier: lastTxnId,
           AutoComplete: autoComplete
         })
       });
+
       const txt = await r.text();
-      let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-      log('> /api/spi/payment respuesta:'); log(data);
+      let data;
+      try {
+        data = JSON.parse(txt);
+      } catch {
+        data = { raw: txt };
+      }
+
+      log('> /api/spi/payment respuesta:');
+      log(data);
       log(prettyPayment(data));
-    } catch (e) { log(e.message || e.toString()); }
+    } catch (e) {
+      log(e.message || e.toString());
+    }
   });
+
 
   // Botón: consulta directa GET /transactions/{id}
   btnTxn.addEventListener('click', async () => {
