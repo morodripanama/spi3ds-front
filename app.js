@@ -522,24 +522,64 @@
     const apiBase = apiBaseEl.value.trim();
     const id = prompt('Txn a reembolsar', lastTxnId || '');
     if (!id) return;
+
     const amount = prompt('Monto a reembolsar (vacío = total)', '');
-    const url = apiBase.replace(/\/+$/, '') + `/api/transactions/${encodeURIComponent(id)}/refund`;
+
+    const url = apiBase.replace(/\/+$/, '') + `/api/transactions/refund`;
     log(`> POST ${url}`);
-    const body = amount ? { TotalAmount: Number(amount) } : {};
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    const txt = await r.text(); let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-    log(data); log(prettyPayment(data));
+
+    const body = {
+      TransactionIdentifier: id
+    };
+
+    if (amount) {
+      body.TotalAmount = Number(amount);
+    }
+
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    const txt = await r.text();
+    let data;
+    try {
+      data = JSON.parse(txt);
+    } catch {
+      data = { raw: txt };
+    }
+
+    log(data);
+    log(prettyPayment(data));
   }
+
 
   async function doSearch() {
     const apiBase = apiBaseEl.value.trim();
-    const orderId = prompt('Buscar por OrderIdentifier (opcional)', 'TEST123') || '';
-    const url = apiBase.replace(/\/+$/, '') + `/api/transactions` + (orderId ? `?orderId=${encodeURIComponent(orderId)}` : '');
+    const txnId = prompt('Buscar por TransactionIdentifier', lastTxnId || '');
+    if (!txnId) return;
+
+    const url = apiBase.replace(/\/+$/, '') + `/api/transactions/${encodeURIComponent(txnId)}`;
     log(`> GET ${url}`);
-    const r = await fetch(url);
-    const txt = await r.text(); let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+
+    const r = await fetch(url, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+
+    const txt = await r.text();
+    let data;
+    try {
+      data = JSON.parse(txt);
+    } catch {
+      data = { raw: txt };
+    }
+
     log(data);
+    log(prettyPayment(data));
   }
+
 
   // listeners
   document.querySelector('#btnCapture')?.addEventListener('click', doCapture);
