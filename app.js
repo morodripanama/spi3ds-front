@@ -354,9 +354,9 @@
     const apiBase = apiBaseEl.value.trim();
     const payUrl = apiBase.replace(/\/+$/, '') + '/api/spi/payment';
     const autoComplete = flowType === "sale";
-    
+
     log(`> POST ${payUrl}`);
-    
+
     try {
       const r = await fetch(payUrl, {
         method: 'POST',
@@ -428,7 +428,7 @@
     const apiBase = apiBaseEl.value.trim();
     const payUrl = apiBase.replace(/\/+$/, '') + '/api/spi/payment';
     log(`> POST ${payUrl}`);
-    
+
     try {
       const r = await fetch(payUrl, {
         method: 'POST',
@@ -498,12 +498,25 @@
     const apiBase = apiBaseEl.value.trim();
     const id = prompt('Txn a anular (void)', lastTxnId || '');
     if (!id) return;
-    const url = apiBase.replace(/\/+$/, '') + `/api/transactions/${encodeURIComponent(id)}/void`;
+
+    const url = apiBase.replace(/\/+$/, '') + `/api/transactions/void`;
+    const body = { TransactionIdentifier: id };
+
     log(`> POST ${url}`);
-    const r = await fetch(url, { method: 'POST' });
-    const txt = await r.text(); let data; try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+    log('Body => ' + JSON.stringify(body));
+
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    const txt = await r.text(); let data;
+    try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+
     log(data); log(prettyPayment(data));
   }
+
 
   async function doRefund() {
     const apiBase = apiBaseEl.value.trim();
